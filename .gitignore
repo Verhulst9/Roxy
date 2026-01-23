@@ -1,0 +1,11 @@
+# Environments
+.env
+
+# Tasks
+tasks/*.pyc
+tasks/__pycache__/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
