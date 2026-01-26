@@ -7,6 +7,63 @@ Nakari 是一个拥有独立人格的 AI，拥有自己的记忆库。
 2. **第二步**：拥有自己的身体/建模，能够通过摄像头感知并与现实世界交互。
 
 ---
+
+## 🚀 Quick Start (快速开始)
+
+目前 Nakari 处于 MVP 阶段，通过命令行界面 (CLI) 进行交互。
+
+### 1. 环境准备
+确保已安装：
+*   Python 3.10+
+*   Redis (作为消息队列和记忆存储，Windows 可使用 WSL 或 Docker 运行)
+
+### 2. 安装依赖
+```bash
+# 推荐使用 Conda 创建环境
+conda create -n nakari python=3.10
+conda activate nakari
+
+# 安装核心依赖
+pip install -r requirements.txt
+
+# 安装语音/CLI 扩展依赖 (可选，用于语音交互)
+pip install -r requirements_audio.txt
+pip install -r requirements_cli.txt
+```
+
+### 3. 配置
+复制 `.env.example` 为 `.env` 并填入必要 Key：
+```bash
+OPENAI_API_KEY=sk-xxxx  # 支持 OpenAI 格式的 API (如 MiniMax)
+OPENAI_API_BASE=https://api.minimax.chat/v1  # 如果使用其他服务商
+```
+
+### 4. 启动系统
+为了获得完整体验（包含后台反思功能），建议启动两个终端。
+
+**终端 1：启动 Celery Worker (大脑后台)**
+```bash
+# Windows (由于 Celery 在 Windows 上的限制，需使用 pool=solo)
+celery -A tasks.app worker --loglevel=info --pool=solo
+
+# Linux/Mac
+celery -A tasks.app worker --loglevel=info
+```
+
+**终端 2：启动 CLI (交互前台)**
+```bash
+python scripts/cli_chat.py
+```
+
+### 5. 如何交互
+*   **文字对话**：直接输入文字并回车。
+*   **语音对话**：按住 **空格键 (Space)** 说话，松开即发送 (需安装 Audio 依赖)。
+*   **指令**：
+    *   `/new` : 开启新对话 session
+    *   `/clear`: 清除当前记忆
+    *   `/quit` : 退出
+
+---
 ## 主要进程 (Processes)
 Nakari 决定何时启用不同的线程或方法。
 
@@ -28,9 +85,12 @@ Nakari 决定何时启用不同的线程或方法。
 **基本任务**：
 
 *   **交互线程 (Interaction Thread)** 
-    *   对话框（Chat）
-    *   语音（Audio - STT/TTS）
-    *   视觉（Vision - 摄像头双向交互）
+    *   对话框（Chat）：基于 LangGraph 的状态管理
+    *   [开发完成] **语音模块 (Audio)**
+        *   STT: 本地化 Faster-Whisper
+        *   TTS: Edge-TTS (实时/免费) + OpenAI (备用)
+        *   CLI: 按键通话 (Push-to-Talk) 终端
+    *   [计划中] 视觉（Vision - 摄像头双向交互）
 
 * 从离散原子网络中查询
 input：自然语言
@@ -39,16 +99,16 @@ output：自然语言
 
 
 *   **反思线程 (Reflection Thread)**
-    *   定期整理记忆和自我认知
-    *   社区发现与图谱重构
+    *   [开发中] 基于 LLM 的动态触发机制 (Tag Signaling)
+    *   [计划中] 社区发现与图谱重构
 
 ---
 ## llm（CPU）
-驱动 Nakari 的核心处理单元，目前暂定概念等价于 LLM。
+驱动 Nakari 的核心处理单元。
 
 **技术选型**：
-*   **LLM 模型**：暂定 API 方式，不考虑本地部署
-*   **具体方案**：（待定 - GPT-4/Claude API等，作为可配置）
+*   **LLM 模型**：MiniMax (通过 OpenAI 兼容接口)
+*   **框架**：LangChain + LangGraph
 
 ---
 
@@ -56,15 +116,20 @@ output：自然语言
 
 **定义：当前上下文窗口**：即 LLM 的 Context Window，包含从记忆流中动态读取的信息。
 
-**技术选型**：LangGraph 或 LangChain
+**技术选型**：LangGraph State Management
 
-**需求**：当上下文窗口接近满时，需要压缩历史对话以保持重要信息
-
-**管理策略**：使用 Summary 方式进行上下文压缩
+**当前实现**：
+*   Redis 持久化存储 raw messages
+*   LangGraph 负责加载、修剪 (Trim) 和状态传递
+*   CLI 终端提供实时交互界面
 
 ---
 
-## 离散原子网络 (Discrete Atom Network) （memory）
+## 离散原子网络 (Discrete Atom Network) （memory） - [计划重构]
+
+**当前状态**: 
+*   **v1 (Current)**: 使用 Redis 列表存储短期记忆和 Insights。
+*   **v2 (Planned)**: 迁移至 Neo4j 实现下述的原子网络结构。
 
 **愿景**：与 Nakari 的所有交互都应被保存，时间的流逝和交流是可以累积的。
 为解决 LLM Context Window 的限制，防止 Token 超长，我们采用特殊的存储结构来简化对话储存并影响 Nakari 的言语性格。
