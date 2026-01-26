@@ -49,7 +49,7 @@ def main():
     print("  /clear       : Clear conversation memory")
     print("  /new         : Start a new session ID")
     if HAS_AUDIO_DEPS:
-        print("  [SPACE] (Hold): Record Audio (Push-to-Talk)")
+        print("  [F5] (Hold): Record Audio (Push-to-Talk)")
     print("==================================================\n")
 
     # Default session ID
@@ -57,136 +57,142 @@ def main():
     print(f"🔹 Session ID: {session_id}")
 
     # Audio State
-    is_recording = False
-    recording_data = []
-    sample_rate = 16000
+    audio_state = {
+        "is_recording": False,
+        "recording_data": [],
+        "stream": None,
+        "sample_rate": 16000 # Store sample rate in state
+    }
     
-    # We'll use a queue or shared state to communicate between the keyboard callback and the main loop
-    # But since input() blocks, we might need a custom input loop.
-    # Actually, if we want key-based interruption, we can't use input().
-    # We must implement our own "get typed input" loop using keyboard or msvcrt.
-    # To keep it simple but functional for the demo: 
-    # Use keyboard.read_event() loop instead of input() is too low level.
-    # Compromise: We use input() for text, but 'keyboard' hooks will interrupt? 
-    # No, input() captures stdin.
-    
-    # Better approach for CLI w/ PTT: 
-    # Use a loop that checks keys periodically.
-    
-    current_text = ""
+    # --- Background F5 Listener Logic ---
+    def f5_monitor_thread():
+        if not HAS_AUDIO_DEPS: return
+        
+        was_pressed = False
+        sample_rate = audio_state["sample_rate"] # Local ref
+        
+        while True:
+            # Check F5 state without suppressing other keys
+            try:
+                is_pressed = keyboard.is_pressed('f5')
+            except:
+                is_pressed = False
+                
+            if is_pressed and not was_pressed:
+                # === F5 DOWN (Start) ===
+                was_pressed = True
+                audio_state["is_recording"] = True
+                audio_state["recording_data"] = []
+                print("\n🎤 [Recording...] (Release F5 to finish)", end="", flush=True)
+                
+                def audio_callback(indata, frames, time, status):
+                    if audio_state["is_recording"]:
+                        audio_state["recording_data"].append(indata.copy())
+                
+                # Start stream
+                try:
+                    audio_state["stream"] = sd.InputStream(samplerate=sample_rate, channels=1, callback=audio_callback)
+                    audio_state["stream"].start()
+                except Exception as e:
+                    print(f"❌ Audio Error: {e}")
+
+            elif not is_pressed and was_pressed:
+                # === F5 UP (Stop & Process) ===
+                was_pressed = False
+                audio_state["is_recording"] = False
+                if audio_state["stream"]:
+                    audio_state["stream"].stop()
+                    audio_state["stream"].close()
+                
+                print("\n✅ Processing Voice...", flush=True)
+                
+                # Background processing (so we don't block the F5 loop, though this loop is already a thread)
+                # But we want to print to stdout which might collide with input()
+                
+                import numpy as np
+                if not audio_state["recording_data"]:
+                    continue
+                    
+                try:
+                    audio_np = np.concatenate(audio_state["recording_data"], axis=0)
+                    temp_wav = f"temp_voice_{str(uuid.uuid4())[:8]}.wav"
+                    sf.write(temp_wav, audio_np, sample_rate)
+                    
+                    # STT
+                    print(f"📝 Transcribing...", flush=True)
+                    transcribed_text = transcribe_audio(temp_wav)
+                    print(f"\n🗣️ You (Voice): {transcribed_text}")
+                    
+                    if os.path.exists(temp_wav): os.remove(temp_wav)
+                    
+                    if transcribed_text.strip():
+                        # Core Logic
+                        print("⏳ Nakari is thinking...", flush=True)
+                        response = process_user_input(transcribed_text, session_id)
+                        print(f"🤖 Nakari > {response}")
+                        print(f"[{session_id}] 👤 > ", end="", flush=True) # Restore prompt visual
+                        
+                        # TTS
+                        tts_result = synthesize_speech(response, return_bytes=True)
+                        if isinstance(tts_result, dict):
+                            audio_bytes = base64.b64decode(tts_result['data'])
+                            play_audio_data(audio_bytes)
+                            
+                except Exception as e:
+                    print(f"❌ Voice Process Error: {e}")
+
+            time.sleep(0.05) # Poll rate
+
+    # Start listener in background thread
+    if HAS_AUDIO_DEPS:
+        listener = threading.Thread(target=f5_monitor_thread, daemon=True)
+        listener.start()
+
+    # --- Main Text Input Loop ---
+    # Using standard input() allows Ctrl+C and IME to work normally
     
     print(f"\n[{session_id}] 👤 > ", end="", flush=True)
-
+    
     while True:
         try:
-            if HAS_AUDIO_DEPS:
-                # Custom Event Loop for TUI-like behavior
-                event = keyboard.read_event(suppress=True) # Suppress prevents echo to terminal
-                
-                if event.event_type == keyboard.KEY_DOWN:
-                    if event.name == 'esc':
-                        print("\nGoodbye! 👋")
-                        break
-                    
-                    elif event.name == 'space':
-                        if not is_recording:
-                            print("\n🎤 [Recording...] (Release SPACE to finish)", end="", flush=True)
-                            is_recording = True
-                            recording_data = []
-                            # Start recording stream
-                            # sounddevice.rec is non-blocking but fixed duration. 
-                            # We need InputStream for unknown duration.
-                            def audio_callback(indata, frames, time, status):
-                                if is_recording:
-                                    recording_data.append(indata.copy())
-                            
-                            stream = sd.InputStream(samplerate=sample_rate, channels=1, callback=audio_callback)
-                            stream.start()
-                            
-                    elif event.name == 'enter':
-                        # Submit text input
-                        if current_text:
-                            user_input = current_text
-                            current_text = ""
-                            print() # New line
-                            
-                            if user_input.lower() in ["/exit", "/quit"]:
-                                break
-                            
-                            # === CORE LOGIC ===
-                            print("⏳ Nakari is thinking...")
-                            response = process_user_input(user_input, session_id)
-                            print(f"🤖 Nakari > {response}")
-                            print(f"\n[{session_id}] 👤 > ", end="", flush=True)
-                        else:
-                             print(f"\n[{session_id}] 👤 > ", end="", flush=True)
-                             
-                    elif event.name == 'backspace':
-                        if len(current_text) > 0:
-                            current_text = current_text[:-1]
-                            # Reprint line
-                            print(f"\r[{session_id}] 👤 > {current_text} ", end="", flush=True) # space to clear chars
-                            print(f"\r[{session_id}] 👤 > {current_text}", end="", flush=True)
-                            
-                    elif len(event.name) == 1: # Simple char
-                        current_text += event.name
-                        print(event.name, end="", flush=True)
-                
-                elif event.event_type == keyboard.KEY_UP:
-                    if event.name == 'space' and is_recording:
-                        is_recording = False
-                        stream.stop()
-                        stream.close()
-                        print("\n✅ Recording finished. Processing...", flush=True)
-                        
-                        # Save and Transcribe
-                        import numpy as np
-                        if not recording_data:
-                            print("❌ No audio recorded.")
-                            print(f"\n[{session_id}] 👤 > {current_text}", end="", flush=True)
-                            continue
-                            
-                        audio_np = np.concatenate(recording_data, axis=0)
-                        temp_wav = "temp_voice_input.wav"
-                        sf.write(temp_wav, audio_np, sample_rate)
-                        
-                        # Transcribe
-                        try:
-                            transcribed_text = transcribe_audio(temp_wav)
-                            print(f"📝 You said: {transcribed_text}")
-                            
-                            # Send to Nakari
-                            response = process_user_input(transcribed_text, session_id)
-                            print(f"🤖 Nakari > {response}")
-                            
-                            # TTS Response
-                            tts_result = synthesize_speech(response, return_bytes=True)
-                            if isinstance(tts_result, dict):
-                                audio_bytes = base64.b64decode(tts_result['data'])
-                                play_audio_data(audio_bytes)
-                            
-                        except Exception as e:
-                            print(f"❌ Error processing audio: {e}")
-                        
-                        if os.path.exists(temp_wav): os.remove(temp_wav)
-                        print(f"\n[{session_id}] 👤 > {current_text}", end="", flush=True)
+            # Standard blocking input
+            # Note: If voice output prints while this is blocking, the prompt line might look messy
+            # but functionality is preserved.
+            user_input = input().strip()
+            
+            if not user_input:
+                print(f"[{session_id}] 👤 > ", end="", flush=True)
+                continue
 
-            else:
-                # Fallback to standard input if no audio deps
-                user_input = input(f"\n[{session_id}] 👤 > ").strip()
-                if not user_input: continue
-                if user_input.lower() in ["/exit", "/quit"]: break
-                
-                print("⏳ Nakari is thinking...")
-                response = process_user_input(user_input, session_id)
-                print(f"🤖 Nakari > {response}")
+            if user_input.lower() in ["/exit", "/quit"]:
+                print("Goodbye! 👋")
+                break
+            
+            if user_input.lower() == "/clear":
+                context_manager.clear_context(session_id)
+                print(f"🧹 Context cleared for {session_id}.")
+                print(f"[{session_id}] 👤 > ", end="", flush=True)
+                continue
+
+            if user_input.lower() == "/new":
+                session_id = f"user_{str(uuid.uuid4())[:8]}"
+                print(f"🆕 Switched to new Session ID: {session_id}")
+                print(f"[{session_id}] 👤 > ", end="", flush=True)
+                continue
+
+            # Text Processing
+            print("⏳ Nakari is thinking...")
+            response = process_user_input(user_input, session_id)
+            print(f"🤖 Nakari > {response}")
+            print(f"[{session_id}] 👤 > ", end="", flush=True)
 
         except KeyboardInterrupt:
             print("\nGoodbye! 👋")
             break
         except Exception as e:
             print(f"❌ Error: {e}")
-            break
+            # Keep running loop on error
+
 
 if __name__ == "__main__":
     main()

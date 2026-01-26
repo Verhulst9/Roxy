@@ -9,5 +9,5 @@ tasks/__pycache__/
 __pycache__/
 *.py[cod]
 *$py.class
-.mp3
-.wav
+*.mp3
+*.wav
