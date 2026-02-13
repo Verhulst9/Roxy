@@ -1,0 +1,18 @@
+# Desktop Pet Dependencies
+PyQt5>=5.15.0
+PyQtWebEngine>=5.15.0
+
+# 3D Rendering (choose one or more)
+pyqtgraph>=0.13.0        # OpenGL 3D rendering
+trimesh>=4.0.0            # 3D model loading
+numpy>=1.24.0
+
+# Alternative: pyglet for pure OpenGL
+# pyglet>=2.0.0
+
+# Backend connection
+websockets>=12.0
+
+# Optional: advanced 3D
+# open3d>=0.17.0
+# pyopengl>=3.1.0

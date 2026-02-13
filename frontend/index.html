@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nakari - 你的 AI 伙伴</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* 主容器 */
+        .container {
+            width: 900px;
+            height: 700px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* === 桌宠区域 === */
+        .pet-area {
+            flex: 1;
+            background: linear-gradient(180deg, #ffecd2 0%, #fcb69f 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Nakari 2D 形象 */
+        .nakari-character {
+            width: 300px;
+            height: 400px;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        /* 身体 */
+        .body {
+            width: 200px;
+            height: 280px;
+            background: linear-gradient(180deg, #ffe4e1 0%, #ffd1dc 100%);
+            border-radius: 100px 100px 80px 80px;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: inset 0 -20px 40px rgba(255, 182, 193, 0.5);
+        }
+
+        /* 头部 */
+        .head {
+            width: 180px;
+            height: 180px;
+            background: linear-gradient(180deg, #ffe4e1 0%, #ffd1dc 100%);
+            border-radius: 50%;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 眼睛 */
+        .eyes {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 40px;
+        }
+
+        .eye {
+            width: 35px;
+            height: 45px;
+            background: #4a3728;
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.15s ease;
+        }
+
+        .eye::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 10px;
+            left: 8px;
+        }
+
+        /* 眨眼动画 */
+        .eye.blink {
+            height: 5px;
+        }
+
+        /* 腮红 */
+        .blush {
+            position: absolute;
+            top: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 100px;
+        }
+
+        .blush-spot {
+            width: 30px;
+            height: 15px;
+            background: rgba(255, 105, 140, 0.4);
+            border-radius: 50%;
+        }
+
+        /* 嘴巴 */
+        .mouth {
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 15px;
+            background: #e57373;
+            border-radius: 0 0 20px 20px;
+            transition: all 0.1s ease;
+        }
+
+        /* 说话时的嘴巴动画 */
+        .mouth.speaking {
+            animation: speak 0.15s infinite alternate;
+        }
+
+        @keyframes speak {
+            0% { height: 5px; }
+            100% { height: 20px; }
+        }
+
+        /* 表情样式 */
+        .expression-happy .eye {
+            height: 40px;
+        }
+
+        .expression-happy .mouth {
+            width: 40px;
+            height: 20px;
+            border-radius: 0 0 25px 25px;
+        }
+
+        .expression-sad .eye {
+            height: 35px;
+            transform: rotate(10deg);
+        }
+        .expression-sad .eye:last-child {
+            transform: rotate(-10deg);
+        }
+
+        .expression-sad .mouth {
+            border-radius: 20px 20px 0 0;
+        }
+
+        .expression-surprised .eye {
+            width: 45px;
+            height: 50px;
+        }
+        .expression-surprised .mouth {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+        }
+
+        .expression-thinking .eye {
+            height: 10px;
+        }
+
+        /* 头发 */
+        .hair {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 100px;
+        }
+
+        .hair-main {
+            width: 200px;
+            height: 80px;
+            background: linear-gradient(180deg, #5d4e6d 0%, #4a3f5f 100%);
+            border-radius: 100px 100px 0 0;
+            position: absolute;
+        }
+
+        .hair-side {
+            width: 60px;
+            height: 120px;
+            background: linear-gradient(180deg, #5d4e6d 0%, #4a3f5f 100%);
+            position: absolute;
+            top: 20px;
+            border-radius: 30px;
+        }
+
+        .hair-side.left { left: 0; }
+        .hair-side.right { right: 0; }
+
+        /* 状态指示器 */
+        .status-bubble {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 16px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .status-bubble.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* === 聊天区域 === */
+        .chat-area {
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+        }
+
+        .chat-header {
+            padding: 20px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .chat-header h1 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .chat-header .status {
+            font-size: 12px;
+            color: #28a745;
+            margin-top: 4px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            animation: messageIn 0.3s ease;
+        }
+
+        @keyframes messageIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: #667eea;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            background: white;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .message.system {
+            background: #f1f3f5;
+            color: #666;
+            align-self: center;
+            font-size: 12px;
+            padding: 8px 16px;
+        }
+
+        /* 输入区域 */
+        .input-area {
+            padding: 16px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .input-row input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 24px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-row input:focus {
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-send {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-send:hover {
+            background: #5568d3;
+        }
+
+        .btn-voice {
+            background: #f1f3f5;
+            color: #495057;
+            padding: 10px;
+        }
+
+        .btn-voice.recording {
+            background: #e03131;
+            color: white;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .btn-clear {
+            background: transparent;
+            color: #868e96;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+
+        .btn-clear:hover {
+            color: #e03131;
+        }
+
+        /* 浮动动画 */
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 桌宠区域 -->
+        <div class="pet-area">
+            <div class="status-bubble" id="statusBubble">👋 你好！我是 Nakari</div>
+
+            <div class="nakari-character floating" id="nakari">
+                <!-- 头发 -->
+                <div class="hair">
+                    <div class="hair-main"></div>
+                    <div class="hair-side left"></div>
+                    <div class="hair-side right"></div>
+                </div>
+
+                <!-- 头部 -->
+                <div class="head">
+                    <div class="eyes">
+                        <div class="eye left-eye"></div>
+                        <div class="eye right-eye"></div>
+                    </div>
+                    <div class="blush">
+                        <div class="blush-spot left"></div>
+                        <div class="blush-spot right"></div>
+                    </div>
+                    <div class="mouth" id="mouth"></div>
+                </div>
+
+                <!-- 身体 -->
+                <div class="body"></div>
+            </div>
+        </div>
+
+        <!-- 聊天区域 -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <h1>Nakari</h1>
+                <div class="status" id="connectionStatus">● 已连接</div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system">欢迎来到 Nakari 的世界！</div>
+            </div>
+
+            <div class="input-area">
+                <div style="margin-bottom: 8px;">
+                    <button class="btn btn-clear" id="clearBtn">清除对话</button>
+                </div>
+                <div class="input-row">
+                    <button class="btn btn-voice" id="voiceBtn" title="按住说话">🎤</button>
+                    <input type="text" id="messageInput" placeholder="和 Nakari 聊天..." />
+                    <button class="btn btn-send" id="sendBtn">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 配置 ===
+        const WS_URL = 'ws://localhost:8000/ws/web_user';
+        const SESSION_ID = 'web_user';
+
+        // === DOM 元素 ===
+        const nakari = document.getElementById('nakari');
+        const mouth = document.getElementById('mouth');
+        const statusBubble = document.getElementById('statusBubble');
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        // === WebSocket 连接 ===
+        let ws = null;
+        let reconnectTimer = null;
+
+        function connect() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                connectionStatus.textContent = '● 已连接';
+                connectionStatus.style.color = '#28a745';
+                showStatus('🟢 在线');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                connectionStatus.textContent = '● 未连接';
+                connectionStatus.style.color = '#dc3545';
+                showStatus('🔴 断开连接');
+
+                // 5秒后重连
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(connect, 5000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        // === 处理 WebSocket 消息 ===
+        function handleWebSocketMessage(data) {
+            switch(data.type) {
+                case 'connected':
+                    console.log('Session:', data.session_id);
+                    break;
+
+                case 'status':
+                    showStatus(data.message);
+                    if (data.status === 'thinking') {
+                        setExpression('thinking');
+                    }
+                    break;
+
+                case 'chat':
+                    addMessage(data.role, data.content);
+                    if (data.role === 'assistant') {
+                        speak(data.content);
+                        setExpression('happy');
+                    }
+                    break;
+
+                case 'audio':
+                    // 播放 TTS 音频
+                    playAudio(data.audio, data.format);
+                    break;
+
+                case 'pong':
+                    // 心跳响应
+                    break;
+            }
+        }
+
+        // === 表情系统 ===
+        function setExpression(expression) {
+            // 移除所有表情类
+            nakari.classList.remove(
+                'expression-happy',
+                'expression-sad',
+                'expression-surprised',
+                'expression-thinking'
+            );
+
+            // 添加新表情
+            nakari.classList.add(`expression-${expression}`);
+
+            // 显示表情气泡
+            const emojiMap = {
+                'happy': '😊',
+                'sad': '😢',
+                'surprised': '😮',
+                'thinking': '💭'
+            };
+            showStatus(emojiMap[expression] || '');
+        }
+
+        // === 说话动画 ===
+        function speak(text) {
+            mouth.classList.add('speaking');
+            showStatus('💬 说话中...');
+
+            // 根据文本长度估算说话时间
+            const duration = Math.max(2000, text.length * 100);
+
+            setTimeout(() => {
+                mouth.classList.remove('speaking');
+                hideStatus();
+            }, duration);
+        }
+
+        // === 音频播放 ===
+        function playAudio(base64Audio, format) {
+            const audio = new Audio();
+            audio.src = `data:audio/${format};base64,${base64Audio}`;
+            audio.play().catch(e => console.error('Audio play error:', e));
+
+            mouth.classList.add('speaking');
+            audio.onended = () => {
+                mouth.classList.remove('speaking');
+            };
+        }
+
+        // === 消息显示 ===
+        function addMessage(role, content) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            msgDiv.textContent = content;
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showStatus(text) {
+            statusBubble.textContent = text;
+            statusBubble.classList.add('visible');
+            setTimeout(() => {
+                if (statusBubble.textContent === text) {
+                    hideStatus();
+                }
+            }, 3000);
+        }
+
+        function hideStatus() {
+            statusBubble.classList.remove('visible');
+        }
+
+        // === 发送消息 ===
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            // 添加用户消息到界面
+            addMessage('user', message);
+            messageInput.value = '';
+
+            // 发送到服务器
+            ws.send(JSON.stringify({
+                type: 'chat',
+                message: message
+            }));
+
+            // 设置思考表情
+            setExpression('thinking');
+        }
+
+        // === 眨眼动画 ===
+        function blink() {
+            const eyes = document.querySelectorAll('.eye');
+            eyes.forEach(eye => eye.classList.add('blink'));
+            setTimeout(() => {
+                eyes.forEach(eye => eye.classList.remove('blink'));
+            }, 150);
+
+            // 随机下次眨眼时间
+            setTimeout(blink, 2000 + Math.random() * 4000);
+        }
+
+        // === 语音录制 ===
+        let mediaRecorder = null;
+        let audioChunks = [];
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (e) => {
+                    audioChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+
+                    reader.onloadend = () => {
+                        const base64 = reader.result.split(',')[1];
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: 'audio',
+                                audio: base64
+                            }));
+                        }
+                    };
+
+                    reader.readAsDataURL(audioBlob);
+                };
+
+                mediaRecorder.start();
+                voiceBtn.classList.add('recording');
+            } catch (e) {
+                console.error('Microphone access error:', e);
+                showStatus('🎤 无法访问麦克风');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                voiceBtn.classList.remove('recording');
+            }
+        }
+
+        // === 清除对话 ===
+        async function clearHistory() {
+            try {
+                const response = await fetch(`/api/history/${SESSION_ID}`, {
+                    method: 'DELETE'
+                });
+                chatMessages.innerHTML = '<div class="message system">对话已清除</div>';
+            } catch (e) {
+                console.error('Clear history error:', e);
+            }
+        }
+
+        // === 事件监听 ===
+        sendBtn.addEventListener('click', sendMessage);
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // 语音按钮（按下开始，松开停止）
+        voiceBtn.addEventListener('mousedown', startRecording);
+        voiceBtn.addEventListener('mouseup', stopRecording);
+        voiceBtn.addEventListener('mouseleave', stopRecording);
+        voiceBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
+        voiceBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+
+        clearBtn.addEventListener('click', clearHistory);
+
+        // === 初始化 ===
+        connect();
+        blink();
+
+        // 心跳保持连接
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 30000);
+
+        // 鼠标跟随效果（让 Nakari 看着鼠标）
+        document.addEventListener('mousemove', (e) => {
+            const eyes = document.querySelectorAll('.eye');
+            const rect = eyes[0].getBoundingClientRect();
+            const eyeCenterX = rect.left + rect.width / 2;
+            const eyeCenterY = rect.top + rect.height / 2;
+
+            const angleX = (e.clientX - eyeCenterX) / 50;
+            const angleY = (e.clientY - eyeCenterY) / 50;
+
+            eyes.forEach(eye => {
+                const pupil = eye.querySelector('::after');
+                // CSS 伪元素不能直接操作，这里简化为轻微移动眼睛
+                eye.style.transform = `translate(${angleX}px, ${angleY}px)`;
+            });
+        });
+    </script>
+</body>
+</html>

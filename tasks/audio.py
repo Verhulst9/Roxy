@@ -20,7 +20,7 @@ def transcribe_audio(file_path: str, language: str = None):
     """
     Celery task to transcribe audio file to text.
     """
-    print(f"🎤 Transcribing audio: {file_path}")
+    print(f"[STT] Transcribing audio: {file_path}")
     import asyncio
     
     # Run async function in sync Celery task
@@ -35,7 +35,7 @@ def transcribe_audio(file_path: str, language: str = None):
         asyncio.set_event_loop(loop)
         
     text = loop.run_until_complete(stt_provider.transcribe(file_path, language))
-    print(f"📝 Transcription result: {text}")
+    print(f"[STT] Transcription result: {text}")
     return text
 
 @app.task(queue="interaction")
@@ -50,7 +50,7 @@ def synthesize_speech(text: str, voice_id: str = None, return_bytes: bool = Fals
     
     Safe bet: Return bytes if requested, but caller must handle decoding.
     """
-    print(f"🗣️ Synthesizing speech: {text[:50]}...")
+    print(f"[TTS] Synthesizing speech: {text[:50]}...")
     import asyncio
     import base64
     
@@ -69,12 +69,12 @@ def synthesize_speech(text: str, voice_id: str = None, return_bytes: bool = Fals
         audio_data = loop.run_until_complete(tts_provider.synthesize(text, voice_id, output_path=None))
         # Encode to base64 string for safe transport via Celery/Redis
         b64_audio = base64.b64encode(audio_data).decode('utf-8')
-        print(f"💾 Audio generated in memory ({len(audio_data)} bytes)")
+        print(f"[TTS] Audio generated ({len(audio_data)} bytes)")
         return {"data": b64_audio, "format": "mp3", "encoding": "base64"}
     else:
         # File based (Legacy/Cache friendly)
         filename = f"{uuid.uuid4()}.mp3"
         output_path = os.path.join(AUDIO_TEMP_DIR, filename)
         final_path = loop.run_until_complete(tts_provider.synthesize(text, voice_id, output_path))
-        print(f"💾 Audio saved to: {final_path}")
+        print(f"[TTS] Audio saved to: {final_path}")
         return final_path

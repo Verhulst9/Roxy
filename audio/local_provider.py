@@ -20,9 +20,9 @@ class LocalWhisperSTT(STTProvider):
         except ImportError:
             raise ImportError("Please install faster-whisper: pip install faster-whisper")
 
-        print(f"🔄 Loading Local Whisper Model ({model_size}) on {device}...")
+        print(f"[Whisper] Loading Model ({model_size}) on {device}...")
         self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
-        print("✅ Local Whisper Model loaded.")
+        print("[Whisper] Model loaded.")
 
     async def transcribe(self, audio_file: Union[str, BinaryIO], language: Optional[str] = None) -> str:
         # faster-whisper primarily accepts file paths or file-like objects (binary)
