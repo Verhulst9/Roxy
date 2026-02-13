@@ -10,6 +10,54 @@ Nakari 是一个拥有独立人格的 AI，拥有自己的记忆库。
 ## 当前工作
 ### 1.接入语音模型
 ### 2.加入可替换的blender模型，实现嘴型和表情控制
+## 更新日志
+### 2.13 加入简易blender形象，实现鼠标点击事件，表情切换和退出功能
+
+## 🐱 桌面宠物使用指南
+
+### 启动桌面宠物
+```bash
+# 方式1：完整启动（检查依赖）
+start_desktop_pet.bat
+
+# 方式2：简化启动
+start_desktop_pet_simple.bat
+
+# 方式3：手动启动
+python modeling/desktop_pet.py
+```
+
+### 交互操作
+| 操作 | 功能 |
+|------|------|
+| **左键拖拽** | 移动桌宠位置 |
+| **左键双击** | 循环切换表情（neutral → happy → sad → surprised → thinking） |
+| **右键点击** | 显示功能菜单 |
+
+### 右键菜单功能
+1. **表情快捷切换**
+   - **Happy** - 设置高兴表情
+   - **Sad** - 设置悲伤表情
+   - **Thinking** - 设置思考表情
+
+2. **系统操作**
+   - **Exit** - 退出桌面宠物程序
+
+### 系统托盘菜单
+- **Happy/Sad/Thinking** - 快速切换表情
+- **Test Speech** - 测试语音功能
+- **Hide/Show** - 隐藏/显示窗口
+- **Exit** - 退出程序
+
+### 启动提示
+程序启动时会显示以下使用提示：
+```
+[Pet] Nakari Desktop Pet started!
+[Pet] Double-click to change expression
+[Pet] Drag to move
+[Pet] Right-click tray icon for menu
+[Pet] Right-click pet for action menu
+```
 
 ## 🚀 Quick Start (快速开始)
 
