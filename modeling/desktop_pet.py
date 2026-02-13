@@ -1,7 +1,7 @@
 # Nakari Desktop Pet
 import sys
 import random
-from PyQt5.QtWidgets import QApplication, QWidget, QSystemTrayIcon, QMenu, QAction
+from PyQt5.QtWidgets import QApplication, QWidget, QSystemTrayIcon, QMenu, QAction, QVBoxLayout
 from PyQt5.QtCore import Qt, QTimer, QPoint
 from PyQt5.QtGui import QPainter, QColor, QPen, QPixmap, QIcon
 
@@ -166,6 +166,21 @@ class PetRenderer(QWidget):
         idx = (expressions.index(self.target_expr) + 1) % len(expressions)
         self.set_expression(expressions[idx])
 
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+
+        menu.addAction("Happy", lambda: self.set_expression('happy'))
+        menu.addAction("Sad", lambda: self.set_expression('sad'))
+        menu.addAction("Thinking", lambda: self.set_expression('thinking'))
+        menu.addSeparator()
+        menu.addAction("Exit", self.parent_window_exit)
+
+        menu.exec_(event.globalPos())
+
+    def parent_window_exit(self):
+        if self.parent():
+            self.parent().close()
+
 
 class DesktopPetWindow(QWidget):
     def __init__(self):
@@ -237,6 +252,7 @@ def main():
     sys.stdout.write("[Pet] Double-click to change expression\n")
     sys.stdout.write("[Pet] Drag to move\n")
     sys.stdout.write("[Pet] Right-click tray icon for menu\n")
+    sys.stdout.write("[Pet] Right-click pet for action menu\n")
 
     sys.exit(app.exec_())
 
