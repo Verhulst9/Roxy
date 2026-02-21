@@ -14,7 +14,6 @@ interface DialogBoxProps {
 export function DialogBox({
   text,
   className = '',
-  speed = 10,
   onComplete,
 }: DialogBoxProps) {
   const prevTextRef = useRef<string>('');

@@ -9,3 +9,5 @@ export { CharacterName } from './CharacterName';
 export { ControlPanel } from './ControlPanel';
 export { TextInput } from './TextInput';
 export { ChoiceButtons } from './ChoiceButtons';
+export { ChatBubble } from './ChatBubble';
+export { ChatHistory } from './ChatHistory';

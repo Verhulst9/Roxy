@@ -1,6 +1,7 @@
 /**
  * P5R (Persona 5 Royal) inspired theme configuration
  * Defines color palette, typography, and animation timing
+ * Updated with light blue color scheme
  */
 
 export interface P5RTheme {
@@ -58,8 +59,8 @@ export const P5RTheme: P5RTheme = {
     primary: {
       black: '#0a0a0a',
       white: '#ffffff',
-      red: '#e63946',        // Rebellion red
-      redDark: '#b82d3a',
+      red: '#64B5F6',        // Light blue
+      redDark: '#42A5F5',
     },
     accent: {
       yellow: '#ffd60a',
@@ -72,9 +73,9 @@ export const P5RTheme: P5RTheme = {
     },
     dialog: {
       background: 'rgba(0, 0, 0, 0.85)',
-      border: '#e63946',
+      border: '#64B5F6',
       text: '#ffffff',
-      nameTag: '#e63946',
+      nameTag: '#64B5F6',
     },
   },
   typography: {

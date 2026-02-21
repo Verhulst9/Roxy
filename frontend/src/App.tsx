@@ -19,6 +19,7 @@ import {
   DialogBox,
   CharacterName,
   TextInput,
+  ChatHistory,
 } from './components/galgame';
 
 // UI components
@@ -64,10 +65,12 @@ function App() {
   const [currentDialog, setCurrentDialog] = useState<DialogState | null>(null);
   const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
   const [live2dReady, setLive2dReady] = useState(false);
+  const [messageHistory, setMessageHistory] = useState<DialogState[]>([]);
 
   // Refs
   const modelRef = useRef<any>(null);
   const audioProcessorRef = useRef<AudioProcessor | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const modelRefCallback = useRef(modelRef);
   const audioProcessorRefCallback = useRef(audioProcessorRef);
   modelRefCallback.current = modelRef;
@@ -100,12 +103,16 @@ function App() {
         const textData = payload as { text: string; isUser: boolean };
         // Only update if text is valid
         if (textData.text && textData.text !== 'undefined' && textData.text !== 'null') {
-          setCurrentDialog({
+          const newDialog: DialogState = {
             text: textData.text,
             speaker: textData.isUser ? 'You' : 'Roxy',
             isUser: textData.isUser,
             timestamp: Date.now(),
-          });
+          };
+          // Add to history
+          setMessageHistory(prev => [...prev, newDialog]);
+          // Update current dialog
+          setCurrentDialog(newDialog);
         }
         break;
 
@@ -193,12 +200,16 @@ function App() {
   const handleSendMessage = useCallback((text: string) => {
     if (text.trim()) {
       sendText(text, true);
-      setCurrentDialog({
+      const newUserDialog: DialogState = {
         text,
         speaker: 'You',
         isUser: true,
         timestamp: Date.now(),
-      });
+      };
+      // Add to history
+      setMessageHistory(prev => [...prev, newUserDialog]);
+      // Update current dialog
+      setCurrentDialog(newUserDialog);
     }
   }, [sendText]);
 
@@ -235,6 +246,13 @@ function App() {
     console.error('Live2D error:', error);
   }, []);
 
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messageHistory]);
+
   return (
     <GalgameLayout>
       {/* Background Layer */}
@@ -262,6 +280,12 @@ function App() {
         </MenuButton>
         <StatusIndicator connectionState={connectionState} live2dReady={live2dReady} />
       </header>
+
+      {/* Chat History */}
+      <ChatHistory
+        messages={messageHistory}
+        containerRef={chatContainerRef}
+      />
 
       {/* Dialog Section */}
       {live2dReady && (
